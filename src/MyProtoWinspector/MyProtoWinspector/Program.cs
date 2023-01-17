@@ -23,8 +23,30 @@ foreach (var process in Process.GetProcesses())
     if (result == 0) continue;
 
     Console.WriteLine($"{process.ProcessName}\t{handle}\t{stringBuilder}");
+
+    // 以下の通りEnumChildWindowsを利用することで子は取得できる
+    // ただし、再帰的に処理できないため、階層構造を確認するためには利用できなさそう
+    // http://studio-jpn.com/win32-api/
+    var childWindows = new List<IntPtr>();
+    EnumChildWindows(handle, new EnumWindowsDelegate(EnumWindowCallBack), IntPtr.Zero);
+    foreach (var childWindow in childWindows)
+    {
+        Console.WriteLine(childWindow);
+    }
+
+    bool EnumWindowCallBack(IntPtr hWnd, IntPtr lparam)
+    {
+        childWindows.Add(hWnd);
+        return true;
+    }
 }
 
 [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsDelegate enumProc, IntPtr lParam);
+
+public delegate bool EnumWindowsDelegate(IntPtr hWnd, IntPtr lparam);
 
